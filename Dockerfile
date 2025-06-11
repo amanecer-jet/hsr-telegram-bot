@@ -1,19 +1,10 @@
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
+# Установка зависимостей
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Копирование файлов
 COPY . .
 
-# Установка браузеров Playwright
-RUN python -m playwright install --with-deps
+# (Удалите или закомментируйте строку ниже)
+# RUN python -m playwright install --with-deps
 
 # Создаём папку data (если не существует)
-RUN mkdir -p data
-
-# Устанавливаем права на все Python-файлы
-RUN chmod 644 *.py && \
-    chmod 644 config.py
-
-CMD ["python", "bot.py"]
