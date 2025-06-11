@@ -1,4 +1,3 @@
-# Конфиг для будущих расширений (например, поддержка других игр)
 class BotConfig:
     SUPPORTED_GAMES = [
         "Honkai: Star Rail"
@@ -9,8 +8,8 @@ class BotConfig:
             "relics": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/relics.json",
             "relic_sets": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/relic_sets.json",
             "light_cones": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/light_cones.json",
-            "relic_main_affixes": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/relic_main_affixs.json",
-            "relic_sub_affixes": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/relic_sub_affixs.json",
+            "relic_main_affixes": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/en/relic_main_affixs.json",
+            "relic_sub_affixes": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/en/relic_sub_affixs.json",
             "paths": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/paths.json",
             "elements": "https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/index_new/ru/elements.json"
         }
