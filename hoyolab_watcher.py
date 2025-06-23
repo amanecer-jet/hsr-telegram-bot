@@ -100,7 +100,8 @@ async def _fetch_article_details(session: aiohttp.ClientSession, url: str) -> Di
         html_page = await _fetch_html(session, url)
         soup = BeautifulSoup(html_page, "html.parser")
         # Дата публикации – в теге <time> с атрибутом datetime
-        dt = MIN_DATE
+        dt = datetime.utcnow()
+        # Если дата слишком старая по умолчанию, заменим позже
         time_el = soup.find("time")
         if time_el and time_el.has_attr("datetime"):
             try:
