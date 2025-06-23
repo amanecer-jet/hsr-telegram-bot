@@ -1,0 +1,6 @@
+aiogram==3.4.1
+requests
+python-dotenv
+beautifulsoup4
+pillow
+lxml
