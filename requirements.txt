@@ -4,4 +4,3 @@ python-dotenv
 beautifulsoup4
 pillow
 lxml
-mihomo
