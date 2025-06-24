@@ -1056,7 +1056,7 @@ async def cmd_card(message: types.Message):
         char_id = int(parts[2]) if len(parts) >= 3 else None
 
         profile_json = await fetch_profile(uid)
-        chars_raw = profile_json.get("characters") or profile_json.get("avatars") or []
+        chars_raw = profile_json.get("characters") or profile_json.get("avatars") or profile_json.get("player", {}).get("avatarInfoList", [])
         # unify to list
         if isinstance(chars_raw, dict):
             chars = list(chars_raw.values())
