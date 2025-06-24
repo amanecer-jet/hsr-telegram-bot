@@ -15,9 +15,10 @@ RUN chmod 644 *.py && \
 
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Initialize submodules (shallow)
-RUN git submodule update --init --depth 1
-
+# Clone resource repositories (shallow)
+RUN git clone --depth 1 --branch master https://github.com/Mar-7th/StarRailRes.git StarRailRes-master \
+    && git clone --depth 1 --branch main https://github.com/fribbels/hsr-optimizer.git hsr-optimizer-main
+    
 RUN python prepare_assets.py
 
 EXPOSE 8080
