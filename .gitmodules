@@ -1,0 +1,9 @@
+[submodule "StarRailRes-master"]
+	path = StarRailRes-master
+	url = https://github.com/Mar-7th/StarRailRes.git
+	branch = master
+
+[submodule "hsr-optimizer-main"]
+	path = hsr-optimizer-main
+	url = https://github.com/fribbels/hsr-optimizer.git
+	branch = main 
