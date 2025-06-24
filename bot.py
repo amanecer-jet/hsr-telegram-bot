@@ -22,6 +22,7 @@ import random
 import html
 from enka_client import fetch_profile, build_from_profile
 from renderer import render_card
+import contextlib
 
 # --- Коды игр ---
 GAME_CODES = {
@@ -1048,22 +1049,71 @@ async def cmd_card(message: types.Message):
     try:
         parts = message.text.strip().split()
         if len(parts) < 2:
-            await message.reply("Usage: /card <UID> [characterId]")
+            await message.reply("Использование: /card <UID> [charId]")
             return
+
         uid = int(parts[1])
         char_id = int(parts[2]) if len(parts) >= 3 else None
 
-        wait_msg = await message.reply("⌛ Генерирую карточку…")
+        profile_json = await fetch_profile(uid)
+        chars_raw = profile_json.get("characters") or profile_json.get("avatars") or []
+        # unify to list
+        if isinstance(chars_raw, dict):
+            chars = list(chars_raw.values())
+        else:
+            chars = chars_raw
+
+        if not chars:
+            await message.reply("⚠️ В профиле не найдено ни одного персонажа. Проверьте настройки приватности HoYoLAB.")
+            return
+
+        # If char_id указан или персонаж один — генерируем сразу
+        if char_id is not None or len(chars) == 1:
+            if char_id is None:
+                char_id = chars[0].get("id")
+
+            wait_msg = await message.reply("⌛ Генерирую карточку…")
+            try:
+                build = build_from_profile(profile_json, uid, char_id)
+                png_bytes = await asyncio.to_thread(render_card, build.dict())
+                await message.reply_photo(types.BufferedInputFile(png_bytes, filename="card.png"))
+            except Exception as e:
+                await message.reply(f"Ошибка: {e}")
+            finally:
+                await wait_msg.delete()
+            return
+
+        # иначе выводим список персонажей
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=ch.get("name", str(ch.get("id"))), callback_data=f"cardchar:{uid}:{ch.get('id')}")]
+            for ch in chars
+        ])
+        await message.reply("Выберите персонажа:", reply_markup=kb)
+    except Exception as e:
+        await message.reply(f"Ошибка: {e}")
+
+# --- Callback for character selection ---
+
+@dp.callback_query(F.data.startswith("cardchar:"))
+async def cb_card_char(callback: types.CallbackQuery):
+    try:
+        _, uid_str, cid_str = callback.data.split(":", 2)
+        uid = int(uid_str)
+        char_id = int(cid_str)
+
+        await callback.answer("Генерирую…", show_alert=False)
 
         profile_json = await fetch_profile(uid)
         build = build_from_profile(profile_json, uid, char_id)
-
         png_bytes = await asyncio.to_thread(render_card, build.dict())
 
-        await message.reply_photo(types.BufferedInputFile(png_bytes, filename="card.png"))
-        await wait_msg.delete()
+        await callback.message.reply_photo(types.BufferedInputFile(png_bytes, filename="card.png"))
     except Exception as e:
-        await message.reply(f"Ошибка: {e}")
+        await callback.message.reply(f"Ошибка: {e}")
+    finally:
+        # удалить исходное сообщение с кнопками для чистоты
+        with contextlib.suppress(Exception):
+            await callback.message.delete()
 
 if __name__ == "__main__":
     print("[bot] Запуск через __main__...")
