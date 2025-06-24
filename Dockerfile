@@ -6,9 +6,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Установка браузеров Playwright
-RUN python -m playwright install --with-deps
-
 # Создаём папку data (если не существует)
 RUN mkdir -p data
 
