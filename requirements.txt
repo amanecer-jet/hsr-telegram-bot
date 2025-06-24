@@ -1,0 +1,13 @@
+aiogram==3.4.1
+requests
+python-dotenv
+lxml
+Pillow
+pydantic
+fastapi
+uvicorn[standard]
+redis
+enka-py
+aiofiles
+python-multipart
+aiohttp
