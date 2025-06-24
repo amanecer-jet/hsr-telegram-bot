@@ -67,78 +67,97 @@ def fetch_profile_sync(uid: int, *, force_refresh: bool = False) -> Dict[str, An
 
 # Mapping utils to be implemented
 
+# ---- Load character meta (name/element/path) from StarRailRes ----
+_CHAR_META: dict[int, dict] = {}
+try:
+    with open("StarRailRes-master/index_new/en/characters.json", encoding="utf-8") as f:
+        _CHAR_META = json.load(f)
+except FileNotFoundError:
+    pass
+
 def _guess_resource_path(icon_name: str) -> str:
     # Simplified path mapping: search in StarRailRes master icon folders
     return f"icon/relic/{icon_name}.png"
 
 
-def _parse_character(uid: int, char_json: dict) -> CharacterBuild:
-    # This parser is simplified; structure may need adjustments based on actual Enka response
-    stats = StatBlock(**{
-        "hp": char_json.get("hp", 0),
-        "atk": char_json.get("atk", 0),
-        "def": char_json.get("def", 0),
-        "spd": char_json.get("spd", 0),
-        "crit_rate": char_json.get("critRate", 0),
-        "crit_dmg": char_json.get("critDmg", 0),
-        "effect_hit_rate": char_json.get("effectHit", 0),
-        "effect_res": char_json.get("effectRes", 0),
-        "break_effect": char_json.get("breakEffect", 0),
-    })
+# Mapping property ID -> our StatBlock field & percentage flag
+_PROP_MAP = {
+    7: ("hp", False),
+    8: ("atk", False),
+    9: ("def_", False),
+    10: ("spd", False),
+    20: ("crit_rate", True),
+    22: ("crit_dmg", True),
+    23: ("effect_hit_rate", True),
+    24: ("effect_res", True),
+    27: ("break_effect", True),
+}
 
-    lc_json = char_json.get("lightCone", {})
+
+def _parse_avatar_info(uid: int, av_json: dict) -> CharacterBuild:
+    cid = av_json.get("avatarId") or av_json.get("id")
+    meta = _CHAR_META.get(str(cid)) or {}
+
+    # Stats
+    prop_map = av_json.get("propertyMap", {}) or av_json.get("propMap", {})
+    stats_kwargs = {}
+    for pid_str, prop in prop_map.items():
+        pid = int(pid_str)
+        field = _PROP_MAP.get(pid)
+        if not field:
+            continue
+        key, is_pct = field
+        val = prop.get("value", 0)
+        stats_kwargs[key] = float(val) if is_pct else int(val)
+
+    stats = StatBlock(**stats_kwargs)
+
+    # Light cone
+    lc = av_json.get("equipList", [{}])[0]
     light_cone = LightCone(
-        id=lc_json.get("id", 0),
-        icon_path=_guess_resource_path(lc_json.get("id", "")),
-        level=lc_json.get("level", 1),
-        superimpose=lc_json.get("superimpose", 1),
+        id=lc.get("tid", 0),
+        icon_path=_guess_resource_path(lc.get("tid", "")),
+        level=lc.get("level", 1),
+        superimpose=lc.get("superimpose", 1),
     )
 
+    # Relics
     relics_list = []
-    for rj in char_json.get("relics", []):
-        sub_stats = [
-            RelicSubStat(
-                id=s.get("id", 0),
-                name=s.get("name", ""),
-                value=s.get("value", 0),
-                is_percent=s.get("isPercent", False),
-            )
-            for s in rj.get("subStats", [])
-        ]
+    for r in av_json.get("relicList", []):
         relics_list.append(
             Relic(
-                id=rj.get("id", 0),
-                icon_path=_guess_resource_path(rj.get("id", "")),
-                main_stat=rj.get("main", {}).get("name", ""),
-                main_value=rj.get("main", {}).get("value", 0),
-                level=rj.get("level", 0),
-                score=rj.get("score", 0),
-                sub_stats=sub_stats,
+                id=r.get("tid", 0),
+                icon_path=_guess_resource_path(r.get("tid", "")),
+                main_stat="",
+                main_value=0,
+                level=r.get("level", 0),
             )
         )
 
-    build = CharacterBuild(
+    return CharacterBuild(
         uid=uid,
-        character_id=char_json.get("id", 0),
-        name=char_json.get("name", ""),
-        element=char_json.get("element", ""),
-        path=char_json.get("path", ""),
-        level=char_json.get("level", 1),
-        eidolon=char_json.get("eidolon", 0),
+        character_id=cid,
+        name=meta.get("name", str(cid)),
+        element=meta.get("element", "Unknown"),
+        path=meta.get("path", "Unknown"),
+        level=av_json.get("level", 1),
+        eidolon=av_json.get("rank", 0),
         stats=stats,
         light_cone=light_cone,
         relics=relics_list,
-        portrait_path=_guess_resource_path(char_json.get("id", "")),
+        portrait_path=_guess_resource_path(cid),
     )
-    return build
 
 
 def build_from_profile(json_data: dict, uid: int, character_id: int | None = None) -> CharacterBuild:
     """Return CharacterBuild for first or specified character in profile json."""
 
-    chars = json_data.get("characters") or json_data.get("avatars") or []
-    if not chars:
-        raise ValueError("No characters found in profile json")
+    chars = (
+        json_data.get("characters")
+        or json_data.get("avatars")
+        or json_data.get("player", {}).get("avatarInfoList")
+        or []
+    )
 
     if character_id is None:
         char_json = chars[0] if isinstance(chars, list) else next(iter(chars.values()))
@@ -151,4 +170,7 @@ def build_from_profile(json_data: dict, uid: int, character_id: int | None = Non
         if char_json is None:
             raise ValueError(f"Character id {character_id} not found")
 
+    # Determine parser by presence of keys
+    if "avatarId" in char_json or "propertyMap" in char_json or "propMap" in char_json:
+        return _parse_avatar_info(uid, char_json)
     return _parse_character(uid, char_json) 
